@@ -17,14 +17,14 @@ class AssignmentService(
     private val missionRepository: MissionRepository,
     private val evaluationTargetRepository: EvaluationTargetRepository
 ) {
-    fun create(missionId: Long, userId: Long, request: AssignmentRequest) {
+    fun create(missionId: Long, userId: Long, request: AssignmentRequest): AssignmentResponse {
         check(!assignmentRepository.existsByUserIdAndMissionId(userId, missionId)) { "이미 제출한 과제 제출물이 존재합니다." }
         val mission = missionRepository.getById(missionId)
         check(mission.isSubmitting) { "제출 불가능한 과제입니다." }
         findEvaluationTargetOf(mission.evaluationId, userId).passIfBeforeEvaluation()
-        assignmentRepository.save(
-            Assignment(userId, missionId, request.githubUsername, request.pullRequestUrl, request.note)
-        )
+        return assignmentRepository
+            .save(Assignment(userId, missionId, request.githubUsername, request.pullRequestUrl, request.note))
+            .let(::AssignmentResponse)
     }
 
     fun update(missionId: Long, userId: Long, request: AssignmentRequest) {
@@ -39,16 +39,16 @@ class AssignmentService(
             ?: throw IllegalArgumentException("평가 대상자가 아닙니다.")
     }
 
+    fun getByUserIdAndMissionId(userId: Long, missionId: Long): AssignmentResponse {
+        val assignment = assignmentRepository.findByUserIdAndMissionId(userId, missionId)
+            ?: throw IllegalArgumentException("제출한 과제 제출물이 존재하지 않습니다.")
+        return AssignmentResponse(assignment)
+    }
+
     fun findByEvaluationTargetId(evaluationTargetId: Long): AssignmentData? {
         val evaluationTarget = evaluationTargetRepository.getById(evaluationTargetId)
         val mission = missionRepository.findByEvaluationId(evaluationTarget.evaluationId) ?: return null
         val assignment = assignmentRepository.findByUserIdAndMissionId(evaluationTarget.userId, mission.id)
         return AssignmentData(assignment)
-    }
-
-    fun getByUserIdAndMissionId(userId: Long, missionId: Long): AssignmentResponse {
-        val assignment = assignmentRepository.findByUserIdAndMissionId(userId, missionId)
-            ?: throw IllegalArgumentException("제출한 과제 제출물이 존재하지 않습니다.")
-        return AssignmentResponse(assignment.githubUsername, assignment.pullRequestUrl, assignment.note)
     }
 }

@@ -11,69 +11,65 @@ import io.mockk.every
 import io.mockk.just
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.context.annotation.ComponentScan
-import org.springframework.context.annotation.FilterType
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
-import support.createLocalDateTime
+import support.test.web.servlet.bearer
 
-@WebMvcTest(
-    controllers = [CheaterRestController::class],
-    includeFilters = [
-        ComponentScan.Filter(type = FilterType.REGEX, pattern = ["apply.security.*"])
-    ]
-)
-internal class CheaterRestControllerTest : RestControllerTest() {
+@WebMvcTest(CheaterRestController::class)
+class CheaterRestControllerTest : RestControllerTest() {
     @MockkBean
     private lateinit var cheaterService: CheaterService
 
-    private val cheaterResponses = listOf(
-        CheaterResponse(
-            Cheater(email = "loki@email.com", createdDateTime = createLocalDateTime(2021, 10, 9, 10, 0, 0, 0)),
-            createUser(name = "로키")
-        ),
-        CheaterResponse(
-            Cheater(email = "amazzi@email.com", createdDateTime = createLocalDateTime(2021, 10, 10, 10, 0, 0, 0)),
-            createUser(name = "아마찌")
-        )
-    )
-    private val cheatedUser = createUser(id = 1L, name = "로키")
+    @Test
+    fun `부정행위자를 조회한다`() {
+        val response = CheaterResponse(Cheater(email = "loki@email.com"), createUser(name = "로키"))
+        every { cheaterService.getById(any()) } returns response
+
+        mockMvc.get("/api/cheaters/{cheaterId}", 1L) {
+            bearer("valid_token")
+        }.andExpect {
+            status { isOk }
+            content { success(response) }
+        }
+    }
 
     @Test
     fun `모든 부정행위자를 찾는다`() {
-        every { cheaterService.findAll() } returns cheaterResponses
+        val responses = listOf(
+            CheaterResponse(Cheater(email = "loki@email.com"), createUser(name = "로키")),
+            CheaterResponse(Cheater(email = "amazzi@email.com"), createUser(name = "아마찌"))
+        )
+        every { cheaterService.findAll() } returns responses
 
         mockMvc.get("/api/cheaters") {
-            header(HttpHeaders.AUTHORIZATION, "Bearer valid_token")
+            bearer("valid_token")
         }.andExpect {
             status { isOk }
-            content { json(objectMapper.writeValueAsString(ApiResponse.success(cheaterResponses))) }
+            content { success(responses) }
         }
     }
 
     @Test
     fun `부정행위자를 추가한다`() {
-        val cheaterData = createCheaterData()
-        every { cheaterService.save(cheaterData) } just Runs
+        val response = CheaterResponse(Cheater(email = "loki@email.com"), createUser(name = "로키"))
+        every { cheaterService.save(any()) } returns response
 
         mockMvc.post("/api/cheaters") {
-            header(HttpHeaders.AUTHORIZATION, "Bearer valid_token")
-            contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(cheaterData)
+            jsonContent(createCheaterData())
+            bearer("valid_token")
         }.andExpect {
-            status { isOk }
+            status { isCreated }
+            content { success(response) }
         }
     }
 
     @Test
     fun `부정행위자를 삭제한다`() {
-        every { cheaterService.deleteById(cheatedUser.id) } just Runs
+        every { cheaterService.deleteById(any()) } just Runs
 
-        mockMvc.delete("/api/cheaters/{cheaterId}", cheatedUser.id) {
-            header(HttpHeaders.AUTHORIZATION, "Bearer valid_token")
+        mockMvc.delete("/api/cheaters/{cheaterId}", 1L) {
+            bearer("valid_token")
         }.andExpect {
             status { isOk }
         }

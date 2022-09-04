@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import React, { useMemo } from "react";
-import { generatePath, Link, useHistory, useLocation } from "react-router-dom";
+import { generatePath, Link, useNavigate, useLocation } from "react-router-dom";
 import RecruitmentItem from "../../components/RecruitmentItem/RecruitmentItem";
 import PATH, { PARAM } from "../../constants/path";
 import { RECRUITMENT_STATUS } from "../../constants/recruitment";
@@ -19,7 +19,7 @@ const BUTTON_LABEL = {
 
 const Recruits = () => {
   const { token } = useTokenContext();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const query = new URLSearchParams(useLocation().search);
   const selectedTab = query.get("status") ?? RECRUITS_TAB.ALL.name;
@@ -36,7 +36,7 @@ const Recruits = () => {
 
   const goToNewApplicationFormPage = (recruitment) => {
     if (!token) {
-      history.push({
+      navigate({
         pathname: PATH.LOGIN,
         state: {
           currentRecruitment: recruitment,
@@ -46,7 +46,7 @@ const Recruits = () => {
       return;
     }
 
-    history.push({
+    navigate({
       pathname: generatePath(PATH.APPLICATION_FORM, {
         status: PARAM.APPLICATION_FORM_STATUS.NEW,
       }),
@@ -84,16 +84,20 @@ const Recruits = () => {
       <div className={styles["recruitment-list-box"]}>
         {recruitment && (
           <div className={styles["recruitment-list"]} role="list">
-            {sortedRecruitment.map((recruitment) => (
-              <RecruitmentItem
-                key={recruitment.id}
-                recruitment={recruitment}
-                isButtonDisabled={recruitment.status !== RECRUITMENT_STATUS.RECRUITING}
-                buttonLabel={BUTTON_LABEL[recruitment.status]}
-                onClickButton={() => goToNewApplicationFormPage(recruitment)}
-                role="listitem"
-              />
-            ))}
+            {sortedRecruitment.length === 0 ? (
+              <div className={styles["empty-state-box"]}>해당하는 모집이 없습니다.</div>
+            ) : (
+              sortedRecruitment.map((recruitment) => (
+                <RecruitmentItem
+                  key={recruitment.id}
+                  recruitment={recruitment}
+                  isButtonDisabled={recruitment.status !== RECRUITMENT_STATUS.RECRUITING}
+                  buttonLabel={BUTTON_LABEL[recruitment.status]}
+                  onClickButton={() => goToNewApplicationFormPage(recruitment)}
+                  role="listitem"
+                />
+              ))
+            )}
           </div>
         )}
       </div>

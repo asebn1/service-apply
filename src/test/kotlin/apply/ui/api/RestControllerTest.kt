@@ -1,6 +1,5 @@
 package apply.ui.api
 
-import apply.config.RestDocsConfiguration
 import apply.createUser
 import apply.security.LoginFailedException
 import apply.security.LoginUser
@@ -12,13 +11,18 @@ import io.mockk.slot
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Import
+import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs
 import org.springframework.core.MethodParameter
-import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpHeaders.AUTHORIZATION
+import org.springframework.http.MediaType.APPLICATION_JSON
 import org.springframework.restdocs.RestDocumentationContextProvider
 import org.springframework.restdocs.RestDocumentationExtension
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation
+import org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint
+import org.springframework.test.web.servlet.MockHttpServletRequestDsl
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.ResultMatcher
+import org.springframework.test.web.servlet.result.ContentResultMatchers
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -27,7 +31,7 @@ import org.springframework.web.context.request.NativeWebRequest
 import org.springframework.web.filter.CharacterEncodingFilter
 import support.test.TestEnvironment
 
-@Import(RestDocsConfiguration::class)
+@AutoConfigureRestDocs
 @ExtendWith(RestDocumentationExtension::class)
 @TestEnvironment
 abstract class RestControllerTest {
@@ -50,7 +54,9 @@ abstract class RestControllerTest {
             .apply<DefaultMockMvcBuilder>(
                 MockMvcRestDocumentation.documentationConfiguration(
                     restDocumentationContextProvider
-                )
+                ).operationPreprocessors()
+                    .withRequestDefaults(prettyPrint())
+                    .withResponseDefaults(prettyPrint())
             )
             .build()
         loginUserResolver.also {
@@ -61,7 +67,7 @@ abstract class RestControllerTest {
             }
             slot<NativeWebRequest>().also { slot ->
                 every { it.resolveArgument(any(), any(), capture(slot), any()) } answers {
-                    val hasToken = slot.captured.getHeader(HttpHeaders.AUTHORIZATION)?.contains("Bearer")
+                    val hasToken = slot.captured.getHeader(AUTHORIZATION)?.startsWith("Bearer", true)
                     if (hasToken != true) {
                         throw LoginFailedException()
                     }
@@ -69,5 +75,18 @@ abstract class RestControllerTest {
                 }
             }
         }
+    }
+
+    fun MockHttpServletRequestDsl.jsonContent(value: Any) {
+        content = objectMapper.writeValueAsString(value)
+        contentType = APPLICATION_JSON
+    }
+
+    fun ContentResultMatchers.success(value: Any): ResultMatcher {
+        return json(objectMapper.writeValueAsString(ApiResponse.success(value)), true)
+    }
+
+    fun ContentResultMatchers.error(message: String): ResultMatcher {
+        return json(objectMapper.writeValueAsString(ApiResponse.error(message)), true)
     }
 }

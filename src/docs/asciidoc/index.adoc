@@ -1,0 +1,12 @@
+:doctype: book
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 1
+:sectlinks:
+
+== Service-Apply
+
+include::application-form.adoc[]
+include::assignment.adoc[]
+include::recruitment.adoc[]
+include::user.adoc[]
