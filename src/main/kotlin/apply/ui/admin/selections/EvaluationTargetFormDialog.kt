@@ -40,7 +40,7 @@ class EvaluationTargetFormDialog(
         title.text = evaluationResponse.title
         description.value = evaluationResponse.description
 
-        val judgmentResponse = EvaluationJudgementData("requestKey", "1sd2qs3", 0, 5, 10)
+        val judgmentResponse = EvaluationJudgementData("채점 완료", "3d15az6", 0, "빌드 성공", 5, 10)
         evaluationJudgementForm = EvaluationJudgmentForm(judgmentResponse)
             .apply { fill(judgmentResponse) }
 
@@ -50,9 +50,11 @@ class EvaluationTargetFormDialog(
         )
 
         // if automation
+        val judgmentFormLayout = FormLayout()
+        judgmentFormLayout.add(H3("자동채점"), createJudgmentRequestButton())
+        judgmentFormLayout.setResponsiveSteps(FormLayout.ResponsiveStep("0", 6))
         add(
-            H3("자동채점"),
-            createJudgmentRequestButton(),
+            judgmentFormLayout,
             evaluationJudgementForm,
         )
         add(
@@ -103,7 +105,8 @@ class EvaluationTargetFormDialog(
 
     private fun createJudgmentRequestButton(): Button {
         return createContrastButtonWithDialog("실행", "실행하시겠습니까?") {
-            val judgementRequestData = assignmentService.findJudgementRequestDataByEvaluationTargetId(evaluationTargetId)
+            val judgementRequestData =
+                assignmentService.findJudgementRequestDataByEvaluationTargetId(evaluationTargetId)
             println("createJudgmentRequestButton 실행됨")
             println("userId : ${judgementRequestData?.userId}") // userId
             println("missionId : ${judgementRequestData?.missionId}") // missionId

@@ -27,9 +27,23 @@ class EvaluationTargetForm() : BindingFormLayout<EvaluationTargetData>(Evaluatio
     }
 
     constructor(evaluationItems: List<EvaluationItemResponse>) : this() {
+        // 기존
+        // evaluationItems.forEach {
+        //     val answerForm = EvaluationItemScoreForm(it.title, it.description, it.maximumScore).apply {
+        //         setColspan(this, 2)
+        //     }
+        //     evaluationItemScores.add(answerForm)
+        //     addComponentAtIndex(getIndexOfLastAnswer(), answerForm)
+        // }
+        var count = 0
         evaluationItems.forEach {
+            count += 1
             val answerForm = EvaluationItemScoreForm(it.title, it.description, it.maximumScore).apply {
                 setColspan(this, 2)
+            }
+            if(count == 3){
+                answerForm.element.style.set("-webkit-text-fill-color", "red")
+                // answerForm.element.style.set("background-color", "yellow")
             }
             evaluationItemScores.add(answerForm)
             addComponentAtIndex(getIndexOfLastAnswer(), answerForm)
